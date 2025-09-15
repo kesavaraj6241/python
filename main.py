@@ -65,16 +65,7 @@ REGISTER_SHEET_NAME = "register"
 
 PAYMENT_EXCEL_ID="1PAAj8FyA3nKaSgeb07zDN0TBPPp0vCXTXLoaB1p1gdU"
 PAYMENT_EXCEL_NAME="payment"
-#==============================================================================
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "FastAPI is live on Render!"}
 
-
-@app.get("/favicon.ico")
-async def favicon():
-    return FileResponse("static/favicon.ico")
-#==============================================================================
 # ==============================
 # FastAPI Setup
 # ==============================
@@ -103,6 +94,17 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Zoona Portal API",lifespan=lifespan)
+
+#==============================================================================
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "FastAPI is live on Render!"}
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.ico")
+#==============================================================================
 
 app.add_middleware(
     CORSMiddleware,
