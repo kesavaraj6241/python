@@ -926,22 +926,19 @@ class PaymentRequest(BaseModel):
 
 # ---------- Helper: Send Email ----------
 def send_email(to_email, subject, body):
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    username = "kesavaraj6241@gmail.com"   # your Gmail
-    password = "nnablykodjwbilzv"          # Gmail app password
+
 
     msg = MIMEMultipart()
-    msg["From"] = f"Zoona Technologies <{username}>"
+    msg["From"] = f"Zoona Technologies <{USERNAME}>"
     msg["To"] = to_email
     msg["Subject"] = subject
 
     msg.attach(MIMEText(body, "html"))
 
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
-        server.login(username, password)
+        server.login(USERNAME, PASSWORD)
         server.sendmail(msg["From"], [to_email], msg.as_string())
         server.quit()
         print(f"📧 Mail sent to {to_email}")
