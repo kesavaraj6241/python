@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import secrets
 from pydantic import BaseModel
-import os,json
+import os,json,base64
 
 
 # ==============================
@@ -32,20 +32,19 @@ if not all([SMTP_SERVER, SMTP_PORT, USERNAME, PASSWORD]):
 
 
 
-load_dotenv()  # load .env file# Load environment variable
-creds_json = os.getenv("GOOGLE_CREDS")
-if not creds_json:
-    raise ValueError("GOOGLE_CREDS environment variable not set!")
+creds_b64 = os.getenv("GOOGLE_CREDS")
+if not creds_b64:
+    raise ValueError("GOOGLE_CREDS_B64 environment variable not set!")
 
-# Convert escaped newlines to actual newlines
-creds_json = creds_json.replace("\\n", "\n")
+# Decode Base64 to JSON string
+creds_json = base64.b64decode(creds_b64).decode("utf-8")
+
+# Convert JSON string to dict
 creds_dict = json.loads(creds_json)
 
-# Create credentials object
+# Build credentials and Sheets API service
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-
-# Build Sheets API service
 service = build("sheets", "v4", credentials=creds)
 
 SPREADSHEET_ID = "1EiIjWBXG01SHMnz8aXechn95OJisLaNDhm2SN2nYYQ0"
