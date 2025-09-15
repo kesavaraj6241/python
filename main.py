@@ -71,15 +71,28 @@ PAYMENT_EXCEL_NAME="payment"
 # ==============================
 # FastAPI Setup
 # ==============================
+setup_done = False   # Global flag to ensure setup runs only once
+setup_lock = asyncio.Lock()  # Prevents race conditions
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    loop = asyncio.get_running_loop()
-    # Run all setup functions in a thread pool
-    await loop.run_in_executor(None, contactus_setup_sheet)
-    await loop.run_in_executor(None, setup_sheet)
-    await loop.run_in_executor(None, jobs_setup_sheet)
-    await loop.run_in_executor(None, register_setup_sheet)
-    await loop.run_in_executor(None, setup_payment_sheet)
+    global setup_done
+    async with setup_lock:   # Ensure only one worker does the setup
+        if not setup_done:
+            loop = asyncio.get_running_loop()
+
+            # Run all setup functions concurrently in background threads
+            tasks = [
+                loop.run_in_executor(None, contactus_setup_sheet),
+                loop.run_in_executor(None, setup_sheet),
+                loop.run_in_executor(None, jobs_setup_sheet),
+                loop.run_in_executor(None, register_setup_sheet),
+                loop.run_in_executor(None, setup_payment_sheet),
+            ]
+            await asyncio.gather(*tasks)
+
+            setup_done = True  # ✅ Ensures setup runs only once
+
     yield
 
 app = FastAPI(title="Zoona Portal API",lifespan=lifespan)
