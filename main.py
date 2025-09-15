@@ -17,7 +17,7 @@ from typing import Optional
 import secrets
 from pydantic import BaseModel
 import os,json
-# Allow all origins (for testing)
+
 
 # ==============================
 # Email Configuration
@@ -32,17 +32,20 @@ if not all([SMTP_SERVER, SMTP_PORT, USERNAME, PASSWORD]):
 
 
 
-load_dotenv()  # load .env file
-
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-
+load_dotenv()  # load .env file# Load environment variable
 creds_json = os.getenv("GOOGLE_CREDS")
 if not creds_json:
     raise ValueError("GOOGLE_CREDS environment variable not set!")
 
+# Convert escaped newlines to actual newlines
+creds_json = creds_json.replace("\\n", "\n")
 creds_dict = json.loads(creds_json)
+
+# Create credentials object
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
+# Build Sheets API service
 service = build("sheets", "v4", credentials=creds)
 
 SPREADSHEET_ID = "1EiIjWBXG01SHMnz8aXechn95OJisLaNDhm2SN2nYYQ0"
@@ -582,128 +585,6 @@ def get_me(request: Request):
         raise HTTPException(status_code=401, detail="Not logged in")
     return user
 
-# def append_login_history(username: str, email: str, login_time: str):
-#     """Append a new row with auto-incremented S.No"""
-#     try:
-#         result = service.spreadsheets().values().get(
-#             spreadsheetId=SPREADSHEET_ID,
-#             range=f"{SHEET_NAME}!A:A"
-#         ).execute()
-#
-#         num_rows = len(result.get('values', []))
-#         serial_no = num_rows  # Row count includes header
-#
-#         # Append row with empty LogoutTime & HoursSpent
-#         values = [[serial_no, username, email, login_time, "", ""]]
-#         service.spreadsheets().values().append(
-#             spreadsheetId=SPREADSHEET_ID,
-#             range=f"{SHEET_NAME}!A:F",
-#             valueInputOption="RAW",
-#             insertDataOption="INSERT_ROWS",
-#             body={"values": values}
-#         ).execute()
-#
-#         return True
-#     except Exception as e:
-#         print("Google Sheets Error:", e)
-#         return False
-#
-#
-#
-# @app.post("/login")
-# def login_user(email: str = Form(...), password: str = Form(...)):
-#     try:
-#         # 1. Fetch registered users from the "register" sheet
-#         result = service.spreadsheets().values().get(
-#             spreadsheetId=REGISTER_SPREADSHEET_ID,
-#             range=f"{REGISTER_SHEET_NAME}!A1:F"   # ✅ Correct lowercase tab name
-#         ).execute()
-#
-#         rows = result.get("values", [])[1:]  # Skip header row
-#
-#         # 2. Find matching user (email & password must match)
-#         matched_user = None
-#         for row in rows:
-#             if len(row) >= 4 and row[2] == email and row[3] == password:
-#                 matched_user = row
-#                 break
-#
-#         if not matched_user:
-#             raise HTTPException(status_code=401, detail="Invalid email or password")
-#
-#         # ✅ Username is taken directly from Register sheet (col B)
-#         username = matched_user[1]
-#
-#         # 3. Record login history
-#         login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#         if not append_login_history(username, email, login_time):
-#             raise HTTPException(status_code=500, detail="Failed to store login history")
-#
-#         # 4. Success response
-#         return {
-#             "message": "Login successful!",
-#             "username": username,
-#             "email": email,
-#             "login_time": login_time
-#         }
-#
-#     except Exception as e:
-#         print("Error during login:", e)
-#         raise HTTPException(status_code=500, detail="Login process failed email or password must not be correct")
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# from datetime import datetime
-#
-# def update_logout_history(username: str, email: str, logout_time: str):
-#     """Update the latest login row of a user with logout time and hours spent (HH:MM:SS format)"""
-#     try:
-#         result = service.spreadsheets().values().get(
-#             spreadsheetId=SPREADSHEET_ID,
-#             range=f"{SHEET_NAME}!A:F"
-#         ).execute()
-#
-#         values = result.get("values", [])
-#         if not values or len(values) <= 1:
-#             return False
-#
-#         # Search from bottom to find last login for email
-#         for row_idx in range(len(values) - 1, 0, -1):
-#             row = values[row_idx]
-#             if len(row) >= 3 and row[2] == email:  # email matches
-#                 if len(row) < 5 or row[4] == "":   # no logout yet
-#                     login_time_str = row[3]
-#                     login_dt = datetime.strptime(login_time_str, "%Y-%m-%d %H:%M:%S")
-#                     logout_dt = datetime.strptime(logout_time, "%Y-%m-%d %H:%M:%S")
-#                     time_diff = logout_dt - login_dt
-#                     hours_spent = str(time_diff)   # Store as HH:MM:SS
-#
-#                     update_range = f"{SHEET_NAME}!E{row_idx+1}:F{row_idx+1}"
-#                     service.spreadsheets().values().update(
-#                         spreadsheetId=SPREADSHEET_ID,
-#                         range=update_range,
-#                         valueInputOption="RAW",
-#                         body={"values": [[logout_time, hours_spent]]}
-#                     ).execute()
-#
-#                     return True
-#         return False
-#     except Exception as e:
-#         print("Google Sheets Error:", e)
-#         return False
-#
-# @app.post("/logout")
-# def logout_user(username: str = Form(...), email: str = Form(...)):
-#     logout_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#     if not update_logout_history(username, email, logout_time):
-#         raise HTTPException(status_code=500, detail="Failed to update logout history")
-#     return {"message": "Logout successful!", "username": username, "email": email, "logout_time": logout_time}
 
 
 
@@ -861,37 +742,6 @@ async def register_user(
     }
 
 
-# # ==============================
-# # Register API
-# # ==============================
-# @app.post("/register")
-# async def register_user(
-#     email: str = Form(...),
-#     moblie_number: str=Form(...),
-#     password: str = Form(...),
-#     retype_password: str = Form(...)
-# ):
-#     # Ensure headers exist
-#     # register_setup_sheet()
-#
-#     # Validate passwords
-#     if password != retype_password:
-#         raise HTTPException(status_code=400, detail="Passwords do not match")
-#
-#     # Extract username from email
-#     username = email.split("@")[0]
-#
-#     # Check if email already exists
-#     if check_email_exists(email):
-#         raise HTTPException(status_code=400, detail="You are already registered with us, please log in")
-#
-#     # Add data into Google Sheet
-#     add_register_data(username, email,password,moblie_number)
-#
-#     # (Optional) Send thank you email
-#     send_thankyou_mail(email, username)
-#
-#     return {"message": "Registration successful", "username": username, "email": email}
 
 
 def setup_payment_sheet():
