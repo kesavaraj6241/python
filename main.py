@@ -17,6 +17,7 @@ from typing import Optional
 import secrets
 from pydantic import BaseModel
 import os,json,base64
+import asyncio
 
 
 # ==============================
@@ -72,12 +73,13 @@ PAYMENT_EXCEL_NAME="payment"
 # ==============================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # setup_sheet()              # loginhistroy headers
-    contactus_setup_sheet()    # contactus headers
-    setup_sheet()
-    jobs_setup_sheet()
-    register_setup_sheet()
-    setup_payment_sheet()
+    loop = asyncio.get_running_loop()
+    # Run all setup functions in a thread pool
+    await loop.run_in_executor(None, contactus_setup_sheet)
+    await loop.run_in_executor(None, setup_sheet)
+    await loop.run_in_executor(None, jobs_setup_sheet)
+    await loop.run_in_executor(None, register_setup_sheet)
+    await loop.run_in_executor(None, setup_payment_sheet)
     yield
 
 app = FastAPI(title="Zoona Portal API",lifespan=lifespan)
